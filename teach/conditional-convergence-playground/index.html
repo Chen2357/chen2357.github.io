@@ -105,21 +105,16 @@
   }
   .term-bank {
     display: grid;
-    grid-template-columns: auto repeat(7, 1fr) auto;
-    grid-template-rows: 1fr 1fr;
     align-items: center;
     justify-items: center;
     gap: 0.6rem;
     column-gap: 0.6rem;
   }
   .term-bank .nav-arrow {
-    grid-row: 1 / 3;
-  }
-  .term-bank .nav-arrow:first-child {
     grid-column: 1;
   }
   .term-bank .nav-arrow:last-child {
-    grid-column: 9;
+    grid-column: auto;
   }
   .nav-arrow {
     background: none;
@@ -347,13 +342,14 @@
 
 <script>
 (function() {
-  const TERMS_PER_PAGE = 14;
   let target = 0;
   let page = 0;
   let selectedIndices = []; // array of indices (0-based: 0->1, 1->-1/2, 2->1/3, ...)
   let partialSum = 0;
+  let gridCols = 7, gridRows = 2, gridTotal = 14;
 
   const targetInput = document.getElementById('targetInput');
+  const termBankEl = document.getElementById('termBank');
 
   function formatTarget(n) {
     return n.toFixed(4);
@@ -403,12 +399,35 @@
     return selectedIndices.includes(idx);
   }
 
+  function computeGrid() {
+    const containerWidth = termBankEl.clientWidth || 800;
+    // Reserve ~90px for two nav arrows + gaps
+    const availableWidth = containerWidth - 90;
+    const btnMinWidth = 68; // min width per button including gap
+
+    let cols = Math.floor(availableWidth / btnMinWidth);
+    cols = Math.max(3, Math.min(7, cols));
+
+    let rows = Math.ceil(12 / cols);
+    rows = Math.min(rows, 4);
+    const total = cols * rows;
+
+    gridCols = cols;
+    gridRows = rows;
+    gridTotal = total;
+    termBankEl.style.gridTemplateColumns = `auto repeat(${cols}, 1fr) auto`;
+    termBankEl.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+    termBankEl.querySelector('#prevBtn').style.gridRow = `1 / ${rows + 1}`;
+    termBankEl.querySelector('#nextBtn').style.gridRow = `1 / ${rows + 1}`;
+    termBankEl.querySelector('#nextBtn').style.gridColumn = (cols + 2) + '';
+  }
+
   function renderTermBank() {
     const container = document.getElementById('termBank');
     // Remove all term buttons (keep nav arrows)
     container.querySelectorAll('.term-btn').forEach(el => el.remove());
-    const start = page * TERMS_PER_PAGE;
-    const end = start + TERMS_PER_PAGE;
+    const start = page * gridTotal;
+    const end = start + gridTotal;
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
     for (let i = start; i < end; i++) {
@@ -675,7 +694,17 @@
 
   // Initialize
   rollTarget();
+  computeGrid();
   renderTermBank();
+
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      computeGrid();
+      renderTermBank();
+    }, 100);
+  });
 })();
 </script>
 </body>
